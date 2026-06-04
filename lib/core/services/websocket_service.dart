@@ -32,8 +32,8 @@ class WebSocketService {
     if (_lastRoomCode == null || _lastPlayerName == null || _lastIpAddress == null) return;
     if (_channel != null) return; // Prevent double connections
 
-    final wsUrl = Uri.parse('ws://$_lastIpAddress:8000/ws/$_lastRoomCode/$_lastPlayerName');
     
+    final wsUrl = Uri.parse('wss://$_lastIpAddress/ws/$_lastRoomCode/$_lastPlayerName');
     try {
       _channel = WebSocketChannel.connect(wsUrl);
       _isConnected = true;

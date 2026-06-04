@@ -13,8 +13,11 @@ class LobbyScreen extends StatefulWidget {
 }
 
 class _LobbyScreenState extends State<LobbyScreen> {
+  // 1. Make sure this line is present and NOT commented out:
   final String roomCode = "D3AD-N1T3";
-  final String serverIpAddress = "192.168.1.4"; 
+
+  // 2. Make sure this points to your Render domain (no wss:// or http:// here):
+  final String serverIpAddress = "mafia-game-master.onrender.com"; 
 
   List<Map<String, dynamic>> livePlayers = [];
   String? myName;
