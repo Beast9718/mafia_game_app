@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../data/datasources/local_storage.dart';
+import '../../../core/services/websocket_service.dart';
 
 class GameOverScreen extends StatelessWidget {
   final String winner;
@@ -50,9 +52,18 @@ class GameOverScreen extends StatelessWidget {
                   side: BorderSide(color: Colors.white12, width: 1),
                 ),
               ),
-              onPressed: () {
-                // Return to the lobby for a new game
-                context.go('/lobby');
+              onPressed: () async {
+                // 1. Clear local graveyard and reset role
+                await LocalStorage.instance.clearGraveyard();
+                await LocalStorage.instance.saveRole("STUDENT");
+                
+                // 2. Notify the server to reset room phase to LOBBY
+                WebSocketService.instance.sendAction({"action": "return_to_lobby"});
+                
+                // 3. Navigate back to the lobby screen
+                if (context.mounted) {
+                  context.go('/lobby');
+                }
               },
               child: const Text(
                 "RETURN TO LOBBY",

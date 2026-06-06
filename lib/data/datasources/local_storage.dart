@@ -27,6 +27,14 @@ class LocalStorage {
     return await _storage.read(key: 'player_role');
   }
 
+  Future<void> saveRoomCode(String roomCode) async {
+    await _storage.write(key: 'room_code', value: roomCode);
+  }
+
+  Future<String?> getRoomCode() async {
+    return await _storage.read(key: 'room_code');
+  }
+
   Future<void> killPlayer(String name) async {
     String? currentDead = await _storage.read(key: 'graveyard');
     List<String> deadList = (currentDead != null && currentDead.isNotEmpty) ? currentDead.split(',') : [];
@@ -45,6 +53,10 @@ class LocalStorage {
   // --- NEW: Empties the graveyard so the next game starts fresh ---
   Future<void> clearGraveyard() async {
     await _storage.delete(key: 'graveyard');
+  }
+
+  Future<void> setDeadPlayers(List<String> deadNames) async {
+    await _storage.write(key: 'graveyard', value: deadNames.join(','));
   }
 
   Future<void> clearStorage() async {

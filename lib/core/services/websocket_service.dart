@@ -17,6 +17,7 @@ class WebSocketService {
   String? _lastPlayerName;
   String? _lastIpAddress;
   bool _isConnected = false;
+  bool _isExplicitlyDisconnected = false;
 
   // Screens will listen to this safe broadcast stream safely
   Stream<dynamic> get stream => _streamController.stream;
@@ -25,15 +26,39 @@ class WebSocketService {
     _lastRoomCode = roomCode;
     _lastPlayerName = playerName;
     _lastIpAddress = ipAddress;
+    _isExplicitlyDisconnected = false;
     _initConnection();
   }
 
   void _initConnection() {
+    if (_isExplicitlyDisconnected) return;
     if (_lastRoomCode == null || _lastPlayerName == null || _lastIpAddress == null) return;
-    if (_channel != null) return; // Prevent double connections
+    if (_channel != null) {
+      if (_isConnected) return;
+      try {
+        _channel?.sink.close();
+      } catch (_) {}
+      _channel = null;
+    }
 
+    String scheme = 'wss';
+    String address = _lastIpAddress!;
     
-    final wsUrl = Uri.parse('wss://$_lastIpAddress/ws/$_lastRoomCode/$_lastPlayerName');
+    if (address.startsWith('ws://')) {
+      scheme = 'ws';
+      address = address.replaceFirst('ws://', '');
+    } else if (address.startsWith('wss://')) {
+      scheme = 'wss';
+      address = address.replaceFirst('wss://', '');
+    } else if (address.contains('localhost') || 
+               address.contains('127.0.0.1') || 
+               address.contains('10.0.2.2') || 
+               address.contains('192.168.') || 
+               address.contains(':')) {
+      scheme = 'ws';
+    }
+    
+    final wsUrl = Uri.parse('$scheme://$address/ws/$_lastRoomCode/$_lastPlayerName');
     try {
       _channel = WebSocketChannel.connect(wsUrl);
       _isConnected = true;
@@ -46,6 +71,10 @@ class WebSocketService {
           }
         },
         onDone: () {
+          if (_isExplicitlyDisconnected) {
+            debugPrint("WebSocket Connection Closed Explicitly.");
+            return;
+          }
           debugPrint("WebSocket Connection Dropped. Reconnecting...");
           _channel = null;
           _isConnected = false;
@@ -55,6 +84,7 @@ class WebSocketService {
         onError: (error) {
           debugPrint("WebSocket Error: $error");
           _isConnected = false;
+          _channel = null;
         }
       );
       
@@ -75,6 +105,7 @@ class WebSocketService {
   }
 
   void disconnect() {
+    _isExplicitlyDisconnected = true;
     _channel?.sink.close();
     _channel = null;
     _isConnected = false;

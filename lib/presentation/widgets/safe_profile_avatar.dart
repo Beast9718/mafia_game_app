@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class SafeProfileAvatar extends StatelessWidget {
@@ -20,7 +21,7 @@ class SafeProfileAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Safely check if the path exists and points to a real file on the Android device
-    final bool hasValidFile = imagePath != null && File(imagePath!).existsSync();
+    final bool hasValidFile = !kIsWeb && imagePath != null && File(imagePath!).existsSync();
 
     return Container(
       decoration: BoxDecoration(
@@ -33,14 +34,16 @@ class SafeProfileAvatar extends StatelessWidget {
       child: CircleAvatar(
         radius: radius,
         backgroundColor: isAlive ? Colors.grey.shade900 : Colors.black,
-        // Only attempt to load the file if we confirmed it exists
-        backgroundImage: hasValidFile ? FileImage(File(imagePath!)) : null,
+        // Only attempt to load the file if we confirmed it exists or if we are on web and have a blob/network URL
+        backgroundImage: hasValidFile
+            ? FileImage(File(imagePath!))
+            : (kIsWeb && imagePath != null ? NetworkImage(imagePath!) as ImageProvider : null),
         // Fallback icon if there is no image or the file was lost from cache
-        child: !hasValidFile
+        child: (!hasValidFile && !(kIsWeb && imagePath != null))
             ? Icon(
                 Icons.person,
                 color: isAlive
-                    ? (isSelected ? highlightColor.withOpacity(0.5) : Colors.white54)
+                    ? (isSelected ? highlightColor.withValues(alpha: 0.5) : Colors.white54)
                     : Colors.white10,
                 size: radius,
               )

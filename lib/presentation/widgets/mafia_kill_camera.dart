@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 class MafiaKillCamera extends StatefulWidget {
-  final Function(String videoPath) onKillRecorded;
+  final Function(XFile videoFile) onKillRecorded;
   
   const MafiaKillCamera({super.key, required this.onKillRecorded});
 
@@ -16,6 +17,7 @@ class _MafiaKillCameraState extends State<MafiaKillCamera> {
   int _selectedCameraIndex = 0;
   bool _isInitializing = true;
   bool _isRecording = false;
+  Timer? _recordingTimer;
 
   @override
   void initState() {
@@ -71,18 +73,28 @@ class _MafiaKillCameraState extends State<MafiaKillCamera> {
     if (_controller == null || !_controller!.value.isInitialized) return;
 
     if (_isRecording) {
+      _recordingTimer?.cancel();
+      _recordingTimer = null;
       final XFile videoFile = await _controller!.stopVideoRecording();
       setState(() => _isRecording = false);
-      widget.onKillRecorded(videoFile.path);
+      widget.onKillRecorded(videoFile);
     } else {
       await _controller!.prepareForVideoRecording();
       await _controller!.startVideoRecording();
       setState(() => _isRecording = true);
+
+      // Automatically stop recording after 5 seconds to keep size small
+      _recordingTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted && _isRecording) {
+          _toggleRecording();
+        }
+      });
     }
   }
 
   @override
   void dispose() {
+    _recordingTimer?.cancel();
     _controller?.dispose();
     super.dispose();
   }
@@ -105,18 +117,36 @@ class _MafiaKillCameraState extends State<MafiaKillCamera> {
           ),
         ),
         
-        // Target Reticle
-        Icon(Icons.center_focus_weak, size: 100, color: Colors.redAccent.withOpacity(0.5)),
+        // Target Reticle (Custom drawn to prevent missing icons on web)
+        CustomPaint(
+          size: const Size(120, 120),
+          painter: ReticlePainter(color: Colors.redAccent.withValues(alpha: 0.5)),
+        ),
 
         // Flip Camera Button (Top Right)
         if (!_isRecording && _cameras.length > 1)
           Positioned(
-            top: 8,
-            right: 8,
-            child: IconButton(
-              icon: const Icon(Icons.flip_camera_ios, color: Colors.white, size: 30),
-              onPressed: _flipCamera,
-              style: IconButton.styleFrom(backgroundColor: Colors.black54),
+            top: 12,
+            right: 12,
+            child: GestureDetector(
+              onTap: _flipCamera,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: const Text(
+                  "FLIP",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
             ),
           ),
 
@@ -127,11 +157,18 @@ class _MafiaKillCameraState extends State<MafiaKillCamera> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(12)),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.circle, color: Colors.white, size: 12),
-                  SizedBox(width: 8),
-                  Text("RECORDING...", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text("RECORDING...", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                 ],
               ),
             ),
@@ -148,11 +185,26 @@ class _MafiaKillCameraState extends State<MafiaKillCamera> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.redAccent, width: 3),
-                color: _isRecording ? Colors.redAccent : Colors.transparent,
+                color: _isRecording ? Colors.redAccent.withValues(alpha: 0.2) : Colors.transparent,
               ),
-              child: Icon(
-                _isRecording ? Icons.stop : Icons.fiber_manual_record,
-                color: _isRecording ? Colors.white : Colors.redAccent,
+              child: Center(
+                child: _isRecording
+                    ? Container(
+                        height: 20,
+                        width: 20,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      )
+                    : Container(
+                        height: 24,
+                        width: 24,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.redAccent,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -160,4 +212,43 @@ class _MafiaKillCameraState extends State<MafiaKillCamera> {
       ],
     );
   }
+}
+
+class ReticlePainter extends CustomPainter {
+  final Color color;
+  ReticlePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final w = size.width;
+    final h = size.height;
+    final len = 20.0; // corner line length
+
+    // Top-Left corner
+    canvas.drawLine(const Offset(0, 0), Offset(len, 0), paint);
+    canvas.drawLine(const Offset(0, 0), Offset(0, len), paint);
+
+    // Top-Right corner
+    canvas.drawLine(Offset(w, 0), Offset(w - len, 0), paint);
+    canvas.drawLine(Offset(w, 0), Offset(w, len), paint);
+
+    // Bottom-Left corner
+    canvas.drawLine(Offset(0, h), Offset(len, h), paint);
+    canvas.drawLine(Offset(0, h), Offset(0, h - len), paint);
+
+    // Bottom-Right corner
+    canvas.drawLine(Offset(w, h), Offset(w - len, h), paint);
+    canvas.drawLine(Offset(w, h), Offset(w, h - len), paint);
+
+    // Center circle
+    canvas.drawCircle(Offset(w / 2, h / 2), 8, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
