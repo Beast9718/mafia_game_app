@@ -11,6 +11,7 @@ import '../../../data/datasources/local_storage.dart';
 import '../../../core/services/websocket_service.dart';
 import '../../../core/utils/image_helper.dart'; 
 import '../../../core/utils/video_helper.dart';
+import '../../widgets/terminal_chat_panel.dart';
 
 class DayPhaseScreen extends StatefulWidget {
   final String? victimName;
@@ -57,6 +58,15 @@ class _DayPhaseScreenState extends State<DayPhaseScreen> {
   String? _executedPlayerName;
   Map<String, String> _deadRoles = {};
   List<String> _failedToVotePlayers = [];
+  final List<Map<String, dynamic>> _chatMessages = [];
+
+  void _sendChatMessage(String text) {
+    WebSocketService.instance.sendAction({
+      "action": "send_chat",
+      "channel": "public",
+      "message": text,
+    });
+  }
 
 
 
@@ -246,6 +256,18 @@ class _DayPhaseScreenState extends State<DayPhaseScreen> {
             });
             _startTimer();
           }
+        }
+      }
+
+      // 5. CHAT MESSAGE RECEIVER
+      if (decoded['event'] == 'chat_message' && decoded['channel'] == 'public') {
+        if (mounted) {
+          setState(() {
+            _chatMessages.add({
+              "sender": decoded['sender'],
+              "message": decoded['message'],
+            });
+          });
         }
       }
     });
@@ -552,6 +574,15 @@ class _DayPhaseScreenState extends State<DayPhaseScreen> {
                         ),
                       ),
                     ),
+                  const SizedBox(height: 12),
+                  TerminalChatPanel(
+                    channel: "public",
+                    themeColor: Colors.greenAccent,
+                    isDisabled: isMeDead,
+                    messages: _chatMessages,
+                    myName: _myName ?? "Guest",
+                    onSendMessage: _sendChatMessage,
+                  ),
                 ],
               ),
             ),

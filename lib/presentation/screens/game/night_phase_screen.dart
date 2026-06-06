@@ -8,6 +8,7 @@ import '../../widgets/mafia_kill_camera.dart';
 import '../../../data/datasources/local_storage.dart';
 import '../../../core/services/websocket_service.dart';
 import '../../../core/utils/image_helper.dart';
+import '../../widgets/terminal_chat_panel.dart';
 
 class NightPhaseScreen extends StatefulWidget {
   final List<Map<String, dynamic>> players;
@@ -37,6 +38,15 @@ class _NightPhaseScreenState extends State<NightPhaseScreen> {
   bool? _isScannedTargetMafia;
   String? _scannedTargetRole;
   Map<String, String> _deadRoles = {};
+  final List<Map<String, dynamic>> _mafiaChatMessages = [];
+
+  void _sendMafiaChatMessage(String text) {
+    WebSocketService.instance.sendAction({
+      "action": "send_chat",
+      "channel": "mafia",
+      "message": text,
+    });
+  }
 
 
 
@@ -143,6 +153,18 @@ class _NightPhaseScreenState extends State<NightPhaseScreen> {
             _scannedTarget = target;
             _isScannedTargetMafia = isMafia;
             _scannedTargetRole = roleName;
+          });
+        }
+      }
+
+      // 3.5. MAFIA NIGHT CHAT MESSAGE RECEIVER
+      if (decoded['event'] == 'chat_message' && decoded['channel'] == 'mafia') {
+        if (mounted) {
+          setState(() {
+            _mafiaChatMessages.add({
+              "sender": decoded['sender'],
+              "message": decoded['message'],
+            });
           });
         }
       }
@@ -635,7 +657,18 @@ class _NightPhaseScreenState extends State<NightPhaseScreen> {
                     const Padding(
                       padding: EdgeInsets.only(bottom: 32.0),
                       child: Text("ACTION LOCKED. WAITING FOR SUNRISE...", style: TextStyle(color: Colors.white38, letterSpacing: 2)),
-                    )
+                    ),
+                  if (_assignedRole == "MAFIA") ...[
+                    const SizedBox(height: 12),
+                    TerminalChatPanel(
+                      channel: "mafia",
+                      themeColor: Colors.redAccent,
+                      isDisabled: false,
+                      messages: _mafiaChatMessages,
+                      myName: _myName ?? "Guest",
+                      onSendMessage: _sendMafiaChatMessage,
+                    ),
+                  ],
                 ],
               ),
             ),
