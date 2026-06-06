@@ -22,7 +22,7 @@ class NightPhaseScreen extends StatefulWidget {
 class _NightPhaseScreenState extends State<NightPhaseScreen> {
   String _assignedRole = "STUDENT"; 
 
-  int _secondsLeft = 30;
+  int _secondsLeft = 60;
   Timer? _countdownTimer;
   Timer? _navigationTimer;
   int? _selectedPlayerIndex;
@@ -230,7 +230,7 @@ class _NightPhaseScreenState extends State<NightPhaseScreen> {
           _navigationTimer?.cancel();
           if (mounted) {
             setState(() {
-              _secondsLeft = 30;
+              _secondsLeft = 60;
             });
             _startTimer();
           }

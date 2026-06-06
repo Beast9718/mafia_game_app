@@ -38,7 +38,7 @@ class DayPhaseScreen extends StatefulWidget {
 }
 
 class _DayPhaseScreenState extends State<DayPhaseScreen> {
-  int _secondsLeft = 45; 
+  int _secondsLeft = 60; 
   Timer? _countdownTimer;
   Timer? _navigationTimer;
   bool _showSystemAnnouncement = true;
@@ -252,7 +252,7 @@ class _DayPhaseScreenState extends State<DayPhaseScreen> {
           _navigationTimer?.cancel();
           if (mounted) {
             setState(() {
-              _secondsLeft = 45;
+              _secondsLeft = 60;
             });
             _startTimer();
           }
